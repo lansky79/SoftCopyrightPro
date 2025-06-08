@@ -1,0 +1,4 @@
+click>=8.0.0
+python-docx>=0.8.11
+docx2pdf>=0.1.7
+pywin32>=223;platform_system=="Windows" 
