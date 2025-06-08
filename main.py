@@ -227,8 +227,27 @@ class SoftCopyrightApp(QMainWindow):
     def resizeEvent(self, event):
         """处理窗口大小变化事件"""
         super().resizeEvent(event)
-        # 不再需要手动调整列宽，因为已设置了自动拉伸和固定宽度
         
+        # 窗口大小变化时调整列宽以填满整个区域
+        if hasattr(self, 'file_tree') and hasattr(self, 'output_file_list'):
+            # 获取文件树的总宽度
+            file_tree_width = self.file_tree.width()
+            
+            # 计算文件树的列宽总和(除最后一列)
+            file_tree_columns_width = sum(self.file_tree.header().sectionSize(i) for i in range(1, self.file_tree.header().count()))
+            
+            # 调整第一列宽度以填满剩余空间
+            first_column_width = max(500, file_tree_width - file_tree_columns_width - 25)  # 减去25像素作为滚动条和边框的空间
+            self.file_tree.header().resizeSection(0, first_column_width)
+            
+            # 对输出文件列表做类似处理
+            output_list_width = self.output_file_list.width()
+            output_list_second_column_width = self.output_file_list.header().sectionSize(1)
+            
+            # 调整第一列宽度以填满剩余空间
+            output_first_column_width = max(500, output_list_width - output_list_second_column_width - 25)
+            self.output_file_list.header().resizeSection(0, output_first_column_width)
+    
     def setup_ui(self):
         """设置用户界面"""
         # 设置应用程序全局字体
@@ -244,14 +263,24 @@ class SoftCopyrightApp(QMainWindow):
         
         # 文件列表
         self.file_tree = QTreeWidget()
-        self.file_tree.setHeaderLabels(["文件", "类型", "代码行数", "后缀", "创建日期"])  # 添加创建日期列
+        self.file_tree.setHeaderLabels(["文件路径", "类型", "代码行数", "后缀", "创建日期"])  # 修改列标题使其更明确
         
-        # 设置列宽自适应
-        self.file_tree.header().setSectionResizeMode(0, QHeaderView.Stretch)  # 文件列自动拉伸
-        self.file_tree.header().setSectionResizeMode(1, QHeaderView.ResizeToContents)  # 类型列自适应内容
-        self.file_tree.header().setSectionResizeMode(2, QHeaderView.ResizeToContents)  # 代码行数列自适应内容
-        self.file_tree.header().setSectionResizeMode(3, QHeaderView.ResizeToContents)  # 后缀列自适应内容
-        self.file_tree.header().setSectionResizeMode(4, QHeaderView.ResizeToContents)  # 创建日期列自适应内容
+        # 设置列宽可调整
+        self.file_tree.header().setSectionResizeMode(0, QHeaderView.Interactive)  # 文件列可调整大小
+        self.file_tree.header().setSectionResizeMode(1, QHeaderView.Interactive)  # 类型列可调整大小
+        self.file_tree.header().setSectionResizeMode(2, QHeaderView.Interactive)  # 代码行数列可调整大小
+        self.file_tree.header().setSectionResizeMode(3, QHeaderView.Interactive)  # 后缀列可调整大小
+        self.file_tree.header().setSectionResizeMode(4, QHeaderView.Interactive)  # 创建日期列可调整大小
+        
+        # 设置合理的初始列宽
+        self.file_tree.header().resizeSection(0, 500)  # 文件列初始宽度增加
+        self.file_tree.header().resizeSection(1, 80)   # 类型列初始宽度增加
+        self.file_tree.header().resizeSection(2, 100)  # 代码行数列初始宽度增加
+        self.file_tree.header().resizeSection(3, 80)   # 后缀列初始宽度增加
+        self.file_tree.header().resizeSection(4, 150)  # 创建日期列初始宽度增加
+        
+        # 确保最后一列拉伸填满剩余空间
+        self.file_tree.header().setStretchLastSection(True)
         
         self.file_tree.itemChanged.connect(self.on_item_changed)
         
@@ -259,8 +288,7 @@ class SoftCopyrightApp(QMainWindow):
         self.file_tree.setSortingEnabled(True)
         self.file_tree.setRootIsDecorated(False)  # 不显示展开/折叠箭头，因为没有子项
         self.file_tree.header().setSectionsClickable(True)  # 确保列标题可点击
-        self.file_tree.header().setStretchLastSection(False)  # 最后一列不自动拉伸
-        
+
         # 文件顺序控制按钮
         order_buttons_layout = QHBoxLayout()
         
@@ -463,15 +491,25 @@ class SoftCopyrightApp(QMainWindow):
         
         # 创建文件列表展示
         self.output_file_list = QTreeWidget()
-        self.output_file_list.setHeaderLabels(["文件", "类型"])  # 移除序号列
+        self.output_file_list.setHeaderLabels(["文件路径", "类型"])  # 修改列标题使其更明确
         self.output_file_list.setMinimumHeight(180)  # 设置最小高度
         self.output_file_list.setRootIsDecorated(False)  # 不显示展开/折叠箭头
-        # 设置列宽和调整模式 - 文件列伸展，类型列固定窄宽度
-        self.output_file_list.header().setSectionResizeMode(0, QHeaderView.Stretch)  # 文件列自动拉伸
-        self.output_file_list.header().setSectionResizeMode(1, QHeaderView.Fixed)  # 类型列固定宽度
-        self.output_file_list.header().setStretchLastSection(False)  # 最后一列不自动拉伸
-        # 设置类型列固定宽度
-        self.output_file_list.header().resizeSection(1, 60)  # 类型列宽度设为60像素
+        
+        # 设置列宽可调整
+        self.output_file_list.header().setSectionResizeMode(0, QHeaderView.Interactive)  # 文件列可调整大小
+        self.output_file_list.header().setSectionResizeMode(1, QHeaderView.Interactive)  # 类型列可调整大小
+        
+        # 设置合理的初始列宽
+        self.output_file_list.header().resizeSection(0, 500)  # 文件列初始宽度
+        self.output_file_list.header().resizeSection(1, 80)   # 类型列初始宽度
+        
+        # 确保最后一列拉伸填满剩余空间
+        self.output_file_list.header().setStretchLastSection(True)
+        
+        # 启用排序
+        self.output_file_list.setSortingEnabled(True)
+        self.output_file_list.header().setSectionsClickable(True)  # 确保列标题可点击
+        
         # 启用工具提示
         self.output_file_list.setToolTip("显示按当前顺序将合并的文件列表")
         self.output_file_list.setMouseTracking(True)  # 启用鼠标跟踪以便显示提示气泡
