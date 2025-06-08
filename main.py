@@ -265,6 +265,9 @@ class SoftCopyrightApp(QMainWindow):
         self.file_tree = QTreeWidget()
         self.file_tree.setHeaderLabels(["文件路径", "类型", "代码行数", "后缀", "创建日期"])  # 修改列标题使其更明确
         
+        # 连接双击信号到打开文件函数
+        self.file_tree.itemDoubleClicked.connect(self.open_file)
+        
         # 设置列宽可调整
         self.file_tree.header().setSectionResizeMode(0, QHeaderView.Interactive)  # 文件列可调整大小
         self.file_tree.header().setSectionResizeMode(1, QHeaderView.Interactive)  # 类型列可调整大小
@@ -494,6 +497,9 @@ class SoftCopyrightApp(QMainWindow):
         self.output_file_list.setHeaderLabels(["文件路径", "类型"])  # 修改列标题使其更明确
         self.output_file_list.setMinimumHeight(180)  # 设置最小高度
         self.output_file_list.setRootIsDecorated(False)  # 不显示展开/折叠箭头
+        
+        # 连接双击信号到打开文件函数
+        self.output_file_list.itemDoubleClicked.connect(self.open_file)
         
         # 设置列宽可调整
         self.output_file_list.header().setSectionResizeMode(0, QHeaderView.Interactive)  # 文件列可调整大小
@@ -1121,6 +1127,28 @@ class SoftCopyrightApp(QMainWindow):
         )
         
         QMessageBox.about(self, "关于软著源代码管理器", about_text)
+
+    def open_file(self, item, column):
+        """双击文件列表项时打开对应的代码文件"""
+        file_path = item.text(0)
+        
+        if not os.path.exists(file_path):
+            QMessageBox.warning(self, "警告", f"文件不存在: {file_path}")
+            return
+        
+        try:
+            # 使用系统默认程序打开文件（Windows上是notepad，Linux上是默认文本编辑器）
+            if sys.platform == 'win32':
+                os.startfile(file_path)
+            elif sys.platform == 'darwin':  # macOS
+                os.system(f'open "{file_path}"')
+            else:  # Linux
+                os.system(f'xdg-open "{file_path}"')
+            
+            self.status_bar.showMessage(f"已打开文件: {file_path}")
+        except Exception as e:
+            QMessageBox.critical(self, "错误", f"无法打开文件: {str(e)}")
+            self.status_bar.showMessage(f"打开文件失败: {file_path}")
 
 def main():
     app = QApplication(sys.argv)
