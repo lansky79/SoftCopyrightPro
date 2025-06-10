@@ -131,8 +131,8 @@ def create_aligned_header(section, software_name, software_version, font_name_en
     header_para.paragraph_format.space_before = Pt(0)
     header_para.paragraph_format.space_after = Pt(0)
     
-    # 添加软件名称和版本号（左侧）- 移除开发者信息
-    left_run = header_para.add_run(f"{software_name} {software_version}")
+    # 添加软件名称和版本号（左侧）- 移除开发者信息和中间的空格
+    left_run = header_para.add_run(f"{software_name}{software_version}")
     left_run.font.size = Pt(9)
     left_run.font.name = font_name_en
     set_chinese_font(left_run, font_name_cn)
@@ -302,7 +302,8 @@ def generate_document(
     software_version: str = "v0.1.0",
     font_name_en: str = 'Courier New',
     font_name_cn: str = 'SimSun',  # 宋体
-    font_size: float = 10.5  # 调整为10.5pt
+    font_size: float = 10.5,  # 调整为10.5pt
+    include_filename: bool = True  # 添加是否包含文件名的参数，默认为True
 ) -> Tuple[str, Dict]:
     """
     生成文档
@@ -317,6 +318,7 @@ def generate_document(
         font_name_en: 英文等宽字体名称
         font_name_cn: 中文等宽字体名称
         font_size: 字体大小（磅）
+        include_filename: 是否在源代码中包含文件名，默认为True
     
     Returns:
         元组(生成的文件路径, 文档统计信息)

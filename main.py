@@ -84,6 +84,10 @@ class DocumentGeneratorThread(QThread):
             font_name_en = self.params['font_name_en']
             font_name_cn = self.params['font_name_cn']
             lines_per_page = self.params['lines_per_page']
+            include_filename = self.params['include_filename']
+            remove_large_comments = self.params['remove_large_comments']
+            remove_comments_ratio = self.params['remove_comments_ratio']
+            remove_english_comments = self.params['remove_english_comments']
             
             # 设置进度
             self.progress_signal.emit(10)
@@ -135,8 +139,15 @@ class DocumentGeneratorThread(QThread):
             # 添加顺序信息到process_files中
             process_files['file_order'] = exact_file_order
             
-            # 处理代码文件 - 不使用额外参数
-            merged_content, pages, processed_files = process_code_files(process_files, lines_per_page)
+            # 处理代码文件 - 传递注释处理选项
+            merged_content, pages, processed_files = process_code_files(
+                process_files, 
+                lines_per_page, 
+                include_filename,
+                remove_large_comments,
+                remove_comments_ratio,
+                remove_english_comments
+            )
             
             # 检查处理后的文件是否与预期顺序一致
             debug_print("处理前的文件顺序:")
@@ -176,7 +187,8 @@ class DocumentGeneratorThread(QThread):
                 software_version=software_version,
                 font_name_en=font_name_en,
                 font_name_cn=font_name_cn,
-                font_size=10.5
+                font_size=10.5,
+                include_filename=include_filename
             )
             
             debug_print(f"生成的文档路径: {output_file}")
@@ -483,6 +495,78 @@ class SoftCopyrightApp(QMainWindow):
         self.lines_per_page.setValue(50)
         lines_layout.addWidget(self.lines_per_page)
         params_layout.addLayout(lines_layout)
+        
+        # 添加文件名选项
+        filename_layout = QHBoxLayout()
+        self.include_filename_checkbox = QCheckBox("在源代码中包含文件名")
+        self.include_filename_checkbox.setChecked(True)  # 默认选中
+        self.include_filename_checkbox.setStyleSheet("""
+            QCheckBox {
+                font-size: 10pt;
+                color: #333;
+            }
+            QCheckBox::indicator {
+                width: 18px;
+                height: 18px;
+            }
+        """)
+        filename_layout.addWidget(self.include_filename_checkbox)
+        params_layout.addLayout(filename_layout)
+        
+        # 添加删除大段注释选项
+        large_comments_layout = QHBoxLayout()
+        self.remove_large_comments_checkbox = QCheckBox("删除大段注释（两行及以上）")
+        self.remove_large_comments_checkbox.setChecked(False)  # 默认不选中
+        self.remove_large_comments_checkbox.setStyleSheet("""
+            QCheckBox {
+                font-size: 10pt;
+                color: #333;
+            }
+            QCheckBox::indicator {
+                width: 18px;
+                height: 18px;
+            }
+        """)
+        large_comments_layout.addWidget(self.remove_large_comments_checkbox)
+        params_layout.addLayout(large_comments_layout)
+        
+        # 添加删除英文注释选项
+        english_comments_layout = QHBoxLayout()
+        self.remove_english_comments_checkbox = QCheckBox("删除英文注释")
+        self.remove_english_comments_checkbox.setChecked(False)  # 默认不选中
+        self.remove_english_comments_checkbox.setStyleSheet("""
+            QCheckBox {
+                font-size: 10pt;
+                color: #333;
+            }
+            QCheckBox::indicator {
+                width: 18px;
+                height: 18px;
+            }
+        """)
+        english_comments_layout.addWidget(self.remove_english_comments_checkbox)
+        params_layout.addLayout(english_comments_layout)
+        
+        # 添加随机删除单行注释选项
+        single_comments_layout = QHBoxLayout()
+        single_comments_label = QLabel("随机删除单行注释比例:")
+        single_comments_label.setStyleSheet(right_label_style)
+        single_comments_layout.addWidget(single_comments_label)
+        
+        self.remove_comments_ratio = QSpinBox()
+        self.remove_comments_ratio.setStyleSheet(right_spinbox_style)
+        self.remove_comments_ratio.setFixedHeight(30)  # 强制固定高度
+        self.remove_comments_ratio.setRange(0, 10)
+        self.remove_comments_ratio.setValue(0)  # 默认值为0，表示不删除
+        self.remove_comments_ratio.setSpecialValueText("不删除")  # 当值为0时显示"不删除"
+        single_comments_layout.addWidget(self.remove_comments_ratio)
+        
+        # 添加提示标签
+        ratio_tip_label = QLabel("(0表示不删除，3表示每3个删除1个)")
+        ratio_tip_label.setStyleSheet("font-size: 9pt; color: #666;")
+        single_comments_layout.addWidget(ratio_tip_label)
+        
+        params_layout.addLayout(single_comments_layout)
         
         params_group.setLayout(params_layout)
         
@@ -903,6 +987,14 @@ class SoftCopyrightApp(QMainWindow):
         font_name_cn = self.cn_font_input.text()
         lines_per_page = self.lines_per_page.value()
         
+        # 获取是否包含文件名的选项
+        include_filename = self.include_filename_checkbox.isChecked()
+        
+        # 获取注释处理选项
+        remove_large_comments = self.remove_large_comments_checkbox.isChecked()
+        remove_comments_ratio = self.remove_comments_ratio.value()
+        remove_english_comments = self.remove_english_comments_checkbox.isChecked()
+        
         # 获取选中的文件，按当前树控件中的显示顺序
         current_file_order = []
         backend_files = []
@@ -951,7 +1043,11 @@ class SoftCopyrightApp(QMainWindow):
             'software_version': software_version,
             'font_name_en': font_name_en,
             'font_name_cn': font_name_cn,
-            'lines_per_page': lines_per_page
+            'lines_per_page': lines_per_page,
+            'include_filename': include_filename,  # 添加是否包含文件名的选项
+            'remove_large_comments': remove_large_comments,  # 添加是否删除大段注释的选项
+            'remove_comments_ratio': remove_comments_ratio,  # 添加随机删除单行注释的比例
+            'remove_english_comments': remove_english_comments  # 添加是否删除英文注释的选项
         })
         
         self.doc_thread.progress_signal.connect(self.update_progress)
@@ -973,10 +1069,26 @@ class SoftCopyrightApp(QMainWindow):
         # 获取文件名部分，不含路径
         file_name = os.path.basename(output_file)
         
+        # 生成处理信息文本
+        comment_info = []
+        if self.remove_large_comments_checkbox.isChecked():
+            comment_info.append("已删除大段注释（两行及以上）")
+        
+        remove_ratio = self.remove_comments_ratio.value()
+        if remove_ratio > 0:
+            comment_info.append(f"已随机删除单行注释，每{remove_ratio}个注释删除1个")
+        
+        if self.remove_english_comments_checkbox.isChecked():
+            comment_info.append("已删除所有英文注释")
+        
+        comment_info_text = "\n".join(comment_info)
+        if comment_info_text:
+            comment_info_text = f"\n\n注释处理信息:\n{comment_info_text}"
+        
         result = QMessageBox.question(
             self, "生成完成", 
             f"文档已成功生成到: {output_file}\n\n"
-            f"文件名: {file_name}\n\n"
+            f"文件名: {file_name}{comment_info_text}\n\n"
             f"是否打开文档?",
             QMessageBox.Yes | QMessageBox.No
         )
