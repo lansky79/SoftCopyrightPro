@@ -5,11 +5,15 @@ import time
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QTreeWidget, QTreeWidgetItem, QWidget
 from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QCheckBox
 from PyQt5.QtWidgets import QGroupBox, QSpinBox, QProgressBar, QStatusBar, QMessageBox, QHeaderView
+from PyQt5.QtWidgets import QTabWidget  # 添加标签页组件
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QVariant
 
 from sofcrtpro.file_scanner import scan_directory
 from sofcrtpro.code_processor import process_code_files
 from sofcrtpro.document_generator import generate_document
+
+# 导入文档处理组件
+from document_processor_ui import DocumentProcessorWidget
 
 # 添加调试开关
 DEBUG = True
@@ -267,6 +271,33 @@ class SoftCopyrightApp(QMainWindow):
         app_font.setPointSize(10)  # 设置基础字体大小
         self.setFont(app_font)
         
+        # 创建标签页控件
+        self.tab_widget = QTabWidget()
+        
+        # 创建源代码管理标签页
+        self.code_tab = QWidget()
+        self.setup_code_tab()
+        self.tab_widget.addTab(self.code_tab, "源代码管理")
+        
+        # 创建文档处理标签页
+        self.doc_tab = DocumentProcessorWidget(self)
+        self.tab_widget.addTab(self.doc_tab, "文档处理")
+        
+        # 设置中央窗口部件
+        self.setCentralWidget(self.tab_widget)
+        
+        # 状态栏
+        self.status_bar = QStatusBar()
+        self.setStatusBar(self.status_bar)
+        self.status_bar.showMessage("准备就绪")
+        
+        # 添加开发者信息到状态栏右侧
+        developer_label = QLabel("由 SourceStride 源踔科技 开发")
+        developer_label.setStyleSheet("color: #666; font-size: 9pt;")
+        self.status_bar.addPermanentWidget(developer_label)
+    
+    def setup_code_tab(self):
+        """设置源代码管理标签页"""
         # 主布局
         main_layout = QHBoxLayout()
         
@@ -426,80 +457,20 @@ class SoftCopyrightApp(QMainWindow):
         
         filter_group.setLayout(filter_layout)
         
-        # 参数设置区域
-        params_group = QGroupBox("文档参数设置")
+        # 处理参数设置
+        params_group = QGroupBox("处理参数")
         params_group.setStyleSheet(group_title_style)
         params_layout = QVBoxLayout()
-        params_layout.setSpacing(10)  # 增加间距
-        params_layout.setContentsMargins(15, 15, 15, 15)  # 调整边距
+        params_layout.setContentsMargins(15, 15, 15, 15)
         
-        # 软件名称
-        name_layout = QHBoxLayout()
-        name_label = QLabel("软件名称:")
-        name_label.setStyleSheet(right_label_style)
-        name_layout.addWidget(name_label)
-        self.name_input = QLineEdit("系统")
-        self.name_input.setStyleSheet(right_input_style)
-        name_layout.addWidget(self.name_input)
-        params_layout.addLayout(name_layout)
+        # 添加是否包含文件名选项
+        include_filename_layout = QHBoxLayout()
+        include_filename_label = QLabel("是否包含文件名:")
+        include_filename_label.setStyleSheet(right_label_style)
+        include_filename_layout.addWidget(include_filename_label)
         
-        # 版本号
-        version_layout = QHBoxLayout()
-        version_label = QLabel("版本号:")
-        version_label.setStyleSheet(right_label_style)
-        version_layout.addWidget(version_label)
-        self.version_input = QLineEdit("V1.0")
-        self.version_input.setStyleSheet(right_input_style)
-        version_layout.addWidget(self.version_input)
-        params_layout.addLayout(version_layout)
-        
-        # 输出路径
-        output_path_layout = QHBoxLayout()
-        output_path_label = QLabel("输出路径:")
-        output_path_label.setStyleSheet(right_label_style)
-        output_path_layout.addWidget(output_path_label)
-        self.output_path_input = QLineEdit("./output")
-        self.output_path_input.setStyleSheet(right_input_style)
-        self.output_path_button = QPushButton("浏览...")
-        self.output_path_button.setMinimumHeight(35)  # 调整浏览按钮高度
-        self.output_path_button.clicked.connect(self.select_output_path)
-        output_path_layout.addWidget(self.output_path_input)
-        output_path_layout.addWidget(self.output_path_button)
-        params_layout.addLayout(output_path_layout)
-        
-        # 字体设置
-        font_layout = QHBoxLayout()
-        en_font_label = QLabel("英文字体:")
-        en_font_label.setStyleSheet(right_label_style)
-        font_layout.addWidget(en_font_label)
-        self.en_font_input = QLineEdit("Courier New")
-        self.en_font_input.setStyleSheet(right_input_style)
-        font_layout.addWidget(self.en_font_input)
-        cn_font_label = QLabel("中文字体:")
-        cn_font_label.setStyleSheet(right_label_style)
-        font_layout.addWidget(cn_font_label)
-        self.cn_font_input = QLineEdit("SimSun")
-        self.cn_font_input.setStyleSheet(right_input_style)
-        font_layout.addWidget(self.cn_font_input)
-        params_layout.addLayout(font_layout)
-        
-        # 每页最少行数
-        lines_layout = QHBoxLayout()
-        lines_label = QLabel("每页最少行数:")
-        lines_label.setStyleSheet(right_label_style)
-        lines_layout.addWidget(lines_label)
-        self.lines_per_page = QSpinBox()
-        self.lines_per_page.setStyleSheet(right_spinbox_style)
-        self.lines_per_page.setFixedHeight(30)  # 强制固定高度
-        self.lines_per_page.setRange(30, 100)
-        self.lines_per_page.setValue(50)
-        lines_layout.addWidget(self.lines_per_page)
-        params_layout.addLayout(lines_layout)
-        
-        # 添加文件名选项
-        filename_layout = QHBoxLayout()
-        self.include_filename_checkbox = QCheckBox("在源代码中包含文件名")
-        self.include_filename_checkbox.setChecked(True)  # 默认选中
+        self.include_filename_checkbox = QCheckBox()
+        self.include_filename_checkbox.setChecked(True)
         self.include_filename_checkbox.setStyleSheet("""
             QCheckBox {
                 font-size: 10pt;
@@ -510,63 +481,22 @@ class SoftCopyrightApp(QMainWindow):
                 height: 18px;
             }
         """)
-        filename_layout.addWidget(self.include_filename_checkbox)
-        params_layout.addLayout(filename_layout)
+        include_filename_layout.addWidget(self.include_filename_checkbox)
+        params_layout.addLayout(include_filename_layout)
         
-        # 添加删除大段注释选项
-        large_comments_layout = QHBoxLayout()
-        self.remove_large_comments_checkbox = QCheckBox("删除大段注释（两行及以上）")
-        self.remove_large_comments_checkbox.setChecked(False)  # 默认不选中
-        self.remove_large_comments_checkbox.setStyleSheet("""
-            QCheckBox {
-                font-size: 10pt;
-                color: #333;
-            }
-            QCheckBox::indicator {
-                width: 18px;
-                height: 18px;
-            }
-        """)
-        large_comments_layout.addWidget(self.remove_large_comments_checkbox)
-        params_layout.addLayout(large_comments_layout)
+        # 添加每页行数选项
+        lines_per_page_layout = QHBoxLayout()
+        lines_per_page_label = QLabel("每页行数:")
+        lines_per_page_label.setStyleSheet(right_label_style)
+        lines_per_page_layout.addWidget(lines_per_page_label)
         
-        # 添加删除英文注释选项
-        english_comments_layout = QHBoxLayout()
-        self.remove_english_comments_checkbox = QCheckBox("删除英文注释")
-        self.remove_english_comments_checkbox.setChecked(False)  # 默认不选中
-        self.remove_english_comments_checkbox.setStyleSheet("""
-            QCheckBox {
-                font-size: 10pt;
-                color: #333;
-            }
-            QCheckBox::indicator {
-                width: 18px;
-                height: 18px;
-            }
-        """)
-        english_comments_layout.addWidget(self.remove_english_comments_checkbox)
-        params_layout.addLayout(english_comments_layout)
-        
-        # 添加随机删除单行注释选项
-        single_comments_layout = QHBoxLayout()
-        single_comments_label = QLabel("随机删除单行注释比例:")
-        single_comments_label.setStyleSheet(right_label_style)
-        single_comments_layout.addWidget(single_comments_label)
-        
-        self.remove_comments_ratio = QSpinBox()
-        self.remove_comments_ratio.setStyleSheet(right_spinbox_style)
-        self.remove_comments_ratio.setFixedHeight(30)  # 强制固定高度
-        self.remove_comments_ratio.setRange(0, 10)
-        self.remove_comments_ratio.setValue(0)  # 默认值为0，表示不删除
-        self.remove_comments_ratio.setSpecialValueText("不删除")  # 当值为0时显示"不删除"
-        single_comments_layout.addWidget(self.remove_comments_ratio)
-        
-        # 添加提示标签
-        ratio_tip_label = QLabel("(0表示不删除，3表示每3个删除1个)")
-        ratio_tip_label.setStyleSheet("font-size: 9pt; color: #666;")
-        single_comments_layout.addWidget(ratio_tip_label)
-        
-        params_layout.addLayout(single_comments_layout)
+        self.lines_per_page = QSpinBox()
+        self.lines_per_page.setStyleSheet(right_spinbox_style)
+        self.lines_per_page.setFixedHeight(30)  # 强制固定高度
+        self.lines_per_page.setRange(10, 200)
+        self.lines_per_page.setValue(50)  # 默认值为50
+        lines_per_page_layout.addWidget(self.lines_per_page)
+        params_layout.addLayout(lines_per_page_layout)
         
         params_group.setLayout(params_layout)
         
@@ -666,20 +596,8 @@ class SoftCopyrightApp(QMainWindow):
         main_layout.addWidget(left_container, 2)
         main_layout.addLayout(right_panel, 1)
         
-        # 设置中央窗口部件
-        central_widget = QWidget()
-        central_widget.setLayout(main_layout)
-        self.setCentralWidget(central_widget)
-        
-        # 状态栏
-        self.status_bar = QStatusBar()
-        self.setStatusBar(self.status_bar)
-        self.status_bar.showMessage("准备就绪")
-        
-        # 添加开发者信息到状态栏右侧
-        developer_label = QLabel("由 SourceStride 源踔科技 开发")
-        developer_label.setStyleSheet("color: #666; font-size: 9pt;")
-        self.status_bar.addPermanentWidget(developer_label)
+        # 设置源代码管理标签页的布局
+        self.code_tab.setLayout(main_layout)
         
         # 更新输出文件列表
         self.refresh_output_file_list()
@@ -742,16 +660,38 @@ class SoftCopyrightApp(QMainWindow):
         all_files = scan_directory(folder)
         debug_print(f"扫描到的所有文件数: {len(all_files)}")
         
+        # 定义要排除的目录
+        exclude_dirs = ['build', 'dist', '.git', '__pycache__', 'node_modules', '.vscode', '.idea', 'bin', 'obj']
+        
+        # 排除指定目录中的文件
+        filtered_files = []
+        for file_path in all_files:
+            # 检查文件路径中是否包含要排除的目录
+            normalized_path = file_path.replace("\\", "/")
+            should_exclude = False
+            for exclude_dir in exclude_dirs:
+                if f"/{exclude_dir}/" in normalized_path or normalized_path.startswith(f"{exclude_dir}/"):
+                    should_exclude = True
+                    break
+            
+            if not should_exclude:
+                filtered_files.append(file_path)
+        
+        debug_print(f"排除目录后的文件数: {len(filtered_files)}")
+        
         # 过滤源代码文件
         backend_identifiers = {'.py', '.java', '.c', '.cpp', '.cs', '.go', '.rb', '.php', '.swift'}
         frontend_identifiers = {'.js', '.ts', '.jsx', '.tsx', '.html', '.css', '.vue', '.scss', '.less'}
+        
+        # HTML文件不再被全局排除，因为它们可能是源代码
         
         # GUI前端相关的标识符（文件名或路径中包含这些字符串的可能是UI/前端文件）
         gui_frontend_indicators = ['ui', 'gui', 'view', 'window', 'dialog', 'form', 'widget', 'screen', 'page']
         
         code_files = []
-        for file_path in all_files:
+        for file_path in filtered_files:
             file_ext = os.path.splitext(file_path)[1].lower()
+                
             if file_ext in backend_identifiers or file_ext in frontend_identifiers:
                 code_files.append(file_path)
         
@@ -942,120 +882,74 @@ class SoftCopyrightApp(QMainWindow):
     
     def generate_document(self):
         """生成文档"""
-        if not hasattr(self, 'current_folder') or not self.file_data:
-            QMessageBox.warning(self, "警告", "请先选择项目文件夹并扫描文件")
+        # 检查是否有选中的文件
+        selected_files = [file_path for file_path, data in self.file_data.items() if data['selected']]
+        if not selected_files:
+            QMessageBox.warning(self, "警告", "请至少选择一个文件")
             return
         
-        # 获取参数
-        software_name = self.name_input.text()
-        software_version = self.version_input.text()
-        
-        # 生成文件名
-        output_filename = generate_filename(software_name, software_version)
-        output_dir = self.output_path_input.text()
+        # 检查输出路径
+        output_path = self.output_path_input.text()
+        if not output_path:
+            QMessageBox.warning(self, "警告", "请指定输出路径")
+            return
         
         # 确保输出目录存在
-        if not ensure_directory_exists(output_dir):
-            QMessageBox.critical(self, "错误", f"无法创建输出目录: {output_dir}")
-            return
+        ensure_directory_exists(output_path)
         
-        # 构建完整输出路径
-        output_path = os.path.join(output_dir, output_filename)
+        # 生成输出文件名
+        software_name = self.name_input.text()
+        software_version = self.version_input.text()
+        if not software_name:
+            software_name = "未命名项目"
+        if not software_version:
+            software_version = "1.0"
+        
+        output_file = generate_filename(software_name, software_version)
+        output_file_path = os.path.join(output_path, output_file)
         
         # 检查文件是否可写
-        if os.path.exists(output_path + '.docx') and not check_file_writable(output_path + '.docx'):
-            # 如果文件已存在且不可写，尝试生成新文件名
-            now = datetime.datetime.now()
-            date_str = now.strftime("%m%d%H%M%S")  # 添加秒数以确保唯一
-            
-            # 确保版本号格式正确
-            version = software_version.strip()
-            if version.startswith('v'):
-                version = 'V' + version[1:]
-            elif not version.startswith('V'):
-                version = 'V' + version
-                
-            output_filename = f"{software_name}{version}_{date_str}"
-            output_path = os.path.join(output_dir, output_filename)
-            
-            QMessageBox.warning(
-                self, "警告", 
-                f"原文件可能被占用，将使用新文件名: {output_filename}.docx"
-            )
+        if os.path.exists(output_file_path):
+            if not check_file_writable(output_file_path):
+                QMessageBox.warning(self, "警告", f"无法写入文件: {output_file_path}")
+                return
         
-        font_name_en = self.en_font_input.text()
-        font_name_cn = self.cn_font_input.text()
+        # 获取处理参数
+        include_filename = self.include_filename_checkbox.isChecked()
         lines_per_page = self.lines_per_page.value()
         
-        # 获取是否包含文件名的选项
-        include_filename = self.include_filename_checkbox.isChecked()
-        
-        # 获取注释处理选项
-        remove_large_comments = self.remove_large_comments_checkbox.isChecked()
-        remove_comments_ratio = self.remove_comments_ratio.value()
-        remove_english_comments = self.remove_english_comments_checkbox.isChecked()
-        
-        # 获取选中的文件，按当前树控件中的显示顺序
-        current_file_order = []
-        backend_files = []
-        frontend_files = []
-        
-        # 遍历树控件中的所有项目，保持当前显示顺序
-        root = self.file_tree.invisibleRootItem()
-        item_count = root.childCount()
-        
-        for i in range(item_count):
-            item = root.child(i)
-            file_path = item.text(0)
-            is_checked = item.checkState(0) == Qt.Checked
-            
-            if is_checked and file_path in self.file_data:
-                current_file_order.append(file_path)
-                # 根据文件类型分类
-                if self.file_data[file_path]['type'] == "后端":
-                    backend_files.append(file_path)
-                else:
-                    frontend_files.append(file_path)
-        
-        # 为了确保文件按树控件显示顺序处理，使用 classified_files 参数
-        selected_files = {
-            'backend': backend_files,
-            'frontend': frontend_files,
-            # 添加一个特殊键来存储完整的文件顺序
-            'exact_order': current_file_order
-        }
-        
-        # 调试打印
-        debug_print(f"生成文档 - 选中的文件数量: 后端={len(backend_files)}, 前端={len(frontend_files)}")
-        debug_print(f"文件顺序: {current_file_order}")
-        
-        self.status_bar.showMessage(f"正在生成文档，包含后端文件: {len(backend_files)}个, 前端文件: {len(frontend_files)}个")
+        # 移除删除注释相关参数
+        remove_large_comments = False
+        remove_english_comments = False
+        remove_comments_ratio = 0
         
         # 显示进度条
         self.progress_bar.setVisible(True)
         self.progress_bar.setValue(0)
+        self.status_bar.showMessage("正在生成文档...")
         
-        # 创建并启动文档生成线程
-        self.doc_thread = DocumentGeneratorThread({
-            'classified_files': selected_files,
-            'output_path': output_path,
-            'software_name': software_name,
-            'software_version': software_version,
-            'font_name_en': font_name_en,
-            'font_name_cn': font_name_cn,
+        # 创建并启动生成线程
+        self.generator_thread = DocumentGeneratorThread({
+            'files_dict': {
+                'backend': [f for f in selected_files if self.file_data[f]['type'] == 'backend'],
+                'frontend': [f for f in selected_files if self.file_data[f]['type'] == 'frontend'],
+                'file_order': selected_files  # 使用用户排序的顺序
+            },
+            'output_file': output_file_path,
+            'include_filename': include_filename,
             'lines_per_page': lines_per_page,
-            'include_filename': include_filename,  # 添加是否包含文件名的选项
-            'remove_large_comments': remove_large_comments,  # 添加是否删除大段注释的选项
+            'remove_large_comments': remove_large_comments,
+            'remove_english_comments': remove_english_comments,
             'remove_comments_ratio': remove_comments_ratio,  # 添加随机删除单行注释的比例
-            'remove_english_comments': remove_english_comments  # 添加是否删除英文注释的选项
+            'software_name': software_name,
+            'software_version': software_version
         })
         
-        self.doc_thread.progress_signal.connect(self.update_progress)
-        self.doc_thread.finished_signal.connect(self.document_generated)
-        self.doc_thread.error_signal.connect(self.document_error)
+        self.generator_thread.progress_signal.connect(self.update_progress)
+        self.generator_thread.finished_signal.connect(self.document_generated)
+        self.generator_thread.error_signal.connect(self.document_error)
         
-        self.doc_thread.start()
-        self.status_bar.showMessage("正在生成文档...")
+        self.generator_thread.start()
     
     def update_progress(self, value):
         """更新进度条"""
@@ -1070,25 +964,26 @@ class SoftCopyrightApp(QMainWindow):
         file_name = os.path.basename(output_file)
         
         # 生成处理信息文本
-        comment_info = []
-        if self.remove_large_comments_checkbox.isChecked():
-            comment_info.append("已删除大段注释（两行及以上）")
+        option_info = []
         
-        remove_ratio = self.remove_comments_ratio.value()
-        if remove_ratio > 0:
-            comment_info.append(f"已随机删除单行注释，每{remove_ratio}个注释删除1个")
+        # 添加是否包含文件名的信息
+        if self.include_filename_checkbox.isChecked():
+            option_info.append("已在源代码中包含文件名")
+        else:
+            option_info.append("未在源代码中包含文件名")
         
-        if self.remove_english_comments_checkbox.isChecked():
-            comment_info.append("已删除所有英文注释")
-        
-        comment_info_text = "\n".join(comment_info)
-        if comment_info_text:
-            comment_info_text = f"\n\n注释处理信息:\n{comment_info_text}"
+        # 如果有注释处理信息，添加到选项信息中
+        if option_info:
+            option_info_text = "\n- ".join(option_info)
+            option_info_text = f"\n\n处理选项:\n- {option_info_text}"
+        else:
+            option_info_text = "未应用任何特殊处理"
         
         result = QMessageBox.question(
             self, "生成完成", 
             f"文档已成功生成到: {output_file}\n\n"
-            f"文件名: {file_name}{comment_info_text}\n\n"
+            f"文件名: {file_name}\n\n"
+            f"{option_info_text}\n\n"
             f"是否打开文档?",
             QMessageBox.Yes | QMessageBox.No
         )

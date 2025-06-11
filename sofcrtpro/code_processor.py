@@ -389,7 +389,7 @@ def remove_single_comments_evenly(content: List[str], remove_ratio: int = 3) -> 
     
     Args:
         content: 代码内容行列表
-        remove_ratio: 删除比例，例如3表示每3个单行注释删除1个
+        remove_ratio: 删除比例，例如3表示每3个单行注释删除1个，1表示删除所有单行注释
     
     Returns:
         处理后的代码内容
@@ -411,11 +411,20 @@ def remove_single_comments_evenly(content: List[str], remove_ratio: int = 3) -> 
     # 计算要删除的注释数量
     if remove_ratio <= 0:
         remove_ratio = 3  # 默认值
-    comments_to_remove = len(comment_indices) // remove_ratio
+        comments_to_remove = len(comment_indices) // remove_ratio
+    elif remove_ratio == 1:
+        # 如果比例为1，删除所有单行注释
+        comments_to_remove = len(comment_indices)
+    else:
+        comments_to_remove = len(comment_indices) // remove_ratio
     
     # 随机选择要删除的注释
     if comments_to_remove > 0 and comment_indices:
-        indices_to_remove = set(random.sample(comment_indices, comments_to_remove))
+        if remove_ratio == 1:
+            # 如果比例为1，删除所有单行注释
+            indices_to_remove = set(comment_indices)
+        else:
+            indices_to_remove = set(random.sample(comment_indices, comments_to_remove))
     else:
         indices_to_remove = set()
     
